@@ -1,9 +1,10 @@
-import cv2
+import argparse
 import os
+from multiprocessing import Pool, cpu_count
 import subprocess
+
 import open3d as o3d
 import fiftyone as fo
-from multiprocessing import Pool, cpu_count
 
 def images_to_video(image_folder: str, output_video_path: str, fps: int = 10) -> None:
     """
@@ -45,7 +46,10 @@ def run_colmap_converter(scene_path: str):
     """
     input_path = os.path.join(scene_path, 'colmap_sparse', 'rig')
     ply_output_path = os.path.join(scene_path, 'model.ply')
-    pcd_output_path = os.path.join(scene_path, 'model.pcd')
+    
+    # Get the name of the subdirectory
+    subdirectory_name = os.path.basename(scene_path)
+    pcd_output_path = os.path.join(scene_path, f'{subdirectory_name}.pcd')
     
     command = [
         'colmap', 'model_converter',
@@ -87,14 +91,18 @@ def create_fiftyone_scene(pcd_path: str):
     try:
         scene = fo.Scene()
         
+        # Get the subdirectory name
+        subdirectory_name = os.path.basename(os.path.dirname(pcd_path))
+        
         pcd_sample = fo.PointCloud(
-            name=os.path.basename(os.path.dirname(pcd_path)),
+            name=subdirectory_name,
             pcd_path=pcd_path,
         )
 
         scene.add(pcd_sample)
 
-        fo3d_output_path = os.path.join(os.path.dirname(pcd_path), 'scene.fo3d')
+        # Use the subdirectory name for the .fo3d file
+        fo3d_output_path = os.path.join(os.path.dirname(pcd_path), f'{subdirectory_name}.fo3d')
         scene.write(fo3d_output_path)
         print(f"Created FiftyOne scene for {pcd_path}")
 
@@ -182,12 +190,79 @@ def process_all_scenes_parallel(base_dir: str):
 
     return all_video_paths, all_fo3d_paths
 
-# Main execution
-if __name__ == "__main__":
-    DATA_DIR = '/Users/harpreetsahota/workspace/datasets/wayve_101/scene_062'
-    video_paths, fo3d_paths = process_all_scenes_parallel(DATA_DIR)
+def get_scene_paths(data_dir: str) -> list:
+    """
+    Get a list of all scene paths in the data directory.
 
-    print("All scenes processed.")
-    print(f"Total videos created: {len(video_paths)}")
-    print(f"Total .fo3d files created: {len(fo3d_paths)}")
+    Args:
+        data_dir (str): Path to the base directory containing all scenes.
+
+    Returns:
+        list: List of paths to all scene directories.
+    """
+    return [
+        os.path.join(data_dir, scene_dir)
+        for scene_dir in os.listdir(data_dir)
+        if os.path.isdir(os.path.join(data_dir, scene_dir)) and scene_dir.startswith('scene_')
+    ]
+
+def main(data_dir: str, process_type: str):
+    """
+    Main function to run the specified process on the data directory.
+
+    Args:
+        data_dir (str): Path to the base directory containing all scenes.
+        process_type (str): Type of process to run ('all', 'videos', 'colmap', or 'fiftyone').
+    """
+    scene_paths = get_scene_paths(data_dir)
     
+    if process_type == 'all':
+        video_paths, fo3d_paths = process_all_scenes_parallel(data_dir)
+        print("All scenes processed.")
+        print(f"Total videos created: {len(video_paths)}")
+        print(f"Total .fo3d files created: {len(fo3d_paths)}")
+    elif process_type == 'videos':
+        for scene_path in scene_paths:
+            images_dir = os.path.join(scene_path, "images")
+            if os.path.exists(images_dir):
+                for view_folder in os.listdir(images_dir):
+                    view_path = os.path.join(images_dir, view_folder)
+                    if os.path.isdir(view_path):
+                        video_name = f"{os.path.basename(scene_path)}_{view_folder}.mp4"
+                        video_path = os.path.join(scene_path, video_name)
+                        success = images_to_video(view_path, video_path)
+                        if success:
+                            print(f"Created video: {video_path}")
+                        else:
+                            print(f"Failed to create video for {view_folder}")
+    elif process_type == 'colmap':
+        for scene_path in scene_paths:
+            pcd_path = run_colmap_converter(scene_path)
+            if pcd_path:
+                print(f"Created PCD file: {pcd_path}")
+            else:
+                print(f"Failed to create PCD file for {os.path.basename(scene_path)}")
+    elif process_type == 'fiftyone':
+        for scene_path in scene_paths:
+            pcd_path = os.path.join(scene_path, f"{os.path.basename(scene_path)}.pcd")
+            if os.path.exists(pcd_path):
+                fo3d_path = create_fiftyone_scene(pcd_path)
+                if fo3d_path:
+                    print(f"Created .fo3d file: {fo3d_path}")
+                else:
+                    print(f"Failed to create .fo3d file for {os.path.basename(scene_path)}")
+            else:
+                print(f"PCD file not found for {os.path.basename(scene_path)}")
+    else:
+        print(f"Invalid process type: {process_type}")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Process scenes in the dataset.")
+    parser.add_argument("--data_dir", type=str, default='/Users/harpreetsahota/workspace/datasets/wayve_101/',
+                        help="Path to the base directory containing all scenes.")
+    parser.add_argument("--process", type=str, choices=['all', 'videos', 'colmap', 'fiftyone'],
+                        default='all', help="Type of process to run.")
+
+    args = parser.parse_args()
+
+    main(args.data_dir, args.process)

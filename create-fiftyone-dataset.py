@@ -122,7 +122,7 @@ if __name__ == "__main__":
                 "left_forward": os.path.join(video_dir, scene_id, f"{video_base}_left-forward.mp4"),
                 "right_backward": os.path.join(video_dir, scene_id, f"{video_base}_right-backward.mp4"),
                 "right_forward": os.path.join(video_dir, scene_id, f"{video_base}_right-forward.mp4"),
-                "fo3d": os.path.join(video_dir, scene_id,"scene.fo3d")
+                "point_cloud": os.path.join(video_dir, scene_id, f"{video_base}.fo3d")
             }
             scene_metadata_filename.append(scene_dict)
 
@@ -133,5 +133,8 @@ if __name__ == "__main__":
 
     for video in scene_metadata_filename:
         create_fo_sample(video, dataset)
+    
+    dataset.compute_metadata()
+    dataset.save()
 
     print(f"Created dataset '{DATASET_NAME}' with {len(dataset)} samples")
