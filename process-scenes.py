@@ -5,17 +5,14 @@ import open3d as o3d
 import fiftyone as fo
 from multiprocessing import Pool, cpu_count
 
-def images_to_video(image_folder, output_video_path, fps=10):
+def images_to_video(image_folder: str, output_video_path: str, fps: int = 10) -> None:
     """
-    Create a video from a sequence of images using FFmpeg directly.
+    Convert a folder of images to a video.
 
     Args:
-        image_folder (str): Path to the folder containing image sequences.
+        image_folder (str): Path to the folder containing images.
         output_video_path (str): Path where the output video will be saved.
-        fps (int): Frames per second for the output video.
-
-    Returns:
-        bool: True if successful, False otherwise.
+        fps (int, optional): Frames per second for the output video. Defaults to 10.
     """
     try:
         command = [
@@ -36,7 +33,7 @@ def images_to_video(image_folder, output_video_path, fps=10):
         print(f"Error creating video: {e}")
         return False
 
-def run_colmap_converter(scene_path):
+def run_colmap_converter(scene_path: str):
     """
     Run COLMAP model converter on a given scene path and convert the result to PCD format.
 
@@ -77,7 +74,7 @@ def run_colmap_converter(scene_path):
     
     return None
 
-def create_fiftyone_scene(pcd_path):
+def create_fiftyone_scene(pcd_path: str):
     """
     Create a FiftyOne scene for a given PCD file.
 
@@ -108,7 +105,7 @@ def create_fiftyone_scene(pcd_path):
     
     return None
 
-def process_scene(scene_path):
+def process_scene(scene_path: str):
     """
     Process a single scene: create videos, run COLMAP converter, and create FiftyOne scene.
 
@@ -153,7 +150,7 @@ def process_scene(scene_path):
     print(f"Successfully created .fo3d file: {fo3d_path}")
     return video_paths, fo3d_path
 
-def process_all_scenes_parallel(base_dir):
+def process_all_scenes_parallel(base_dir: str):
     """
     Process all scenes in the base directory in parallel.
 
@@ -187,7 +184,7 @@ def process_all_scenes_parallel(base_dir):
 
 # Main execution
 if __name__ == "__main__":
-    DATA_DIR = '/Users/harpreetsahota/workspace/datasets/wayve_101'
+    DATA_DIR = '/Users/harpreetsahota/workspace/datasets/wayve_101/scene_062'
     video_paths, fo3d_paths = process_all_scenes_parallel(DATA_DIR)
 
     print("All scenes processed.")
