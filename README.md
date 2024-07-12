@@ -1,5 +1,10 @@
 # WayveScene101-to-FiftyOne
 
+### You can explore the dataset without downloading here: https://try.fiftyone.ai/datasets/wayvescenes-101
+
+<img src="WayveScene101.gif" width="50%" height="50%">
+
+
 The WayveScenes101 Dataset is a collection of high-resolution images and camera poses designed to advance research in novel view synthesis and scene reconstruction for autonomous driving applications. Key features of the dataset include[1]:
 
 - 101 diverse driving scenarios, each 20 seconds long
